@@ -1,9 +1,12 @@
-function App() {
-  return (
-    <>
-      <h1 className="text-center text-2xl font-bold">Hello World</h1>
-    </>
-  )
-}
+import React from 'react';
+import Form from './components/Form';
 
-export default App
+const App: React.FC = () => {
+  return (
+    <div className="min-h-screen bg-gray-100 flex items-center justify-center">
+      <Form />
+    </div>
+  );
+};
+
+export default App;
