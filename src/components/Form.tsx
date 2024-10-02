@@ -1,6 +1,11 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
 import React, { useState } from 'react';
 import WalletConnect from './WalletConnect';
+import { useDynamicContext } from '@dynamic-labs/sdk-react-core';
+import { ethers } from 'ethers';
+import { evolutionCollectionFactoryABI, evolutionCollectionABI } from '../abi.ts';
+import { getWeb3Provider,getSigner, } from '@dynamic-labs/ethers-v6'
+import { uploadMetadataToIPFS } from '../ipfs';
+
 
 const Form: React.FC = () => {
   const [name, setName] = useState('');
@@ -8,6 +13,7 @@ const Form: React.FC = () => {
   const [walletAddress, setWalletAddress] = useState('');
   const [image, setImage] = useState<File | null>(null);
   const [predefinedImage, setPredefinedImage] = useState<string>('');
+  const [isLoading, setIsLoading] = useState(false);
 
   const predefinedImages = [
     '/images/image1.jpg',
@@ -15,9 +21,112 @@ const Form: React.FC = () => {
     '/images/image3.jpg',
   ];
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const {primaryWallet} = useDynamicContext();
+
+  const getProviderAndSigner = async () => {
+    const provider = await getWeb3Provider(primaryWallet)
+    const signer = await getSigner(primaryWallet)
+    return { provider, signer };
+  };
+
+  // Generates a random integer between 0 and max
+function getRandomBigInt(max) {
+    return (BigInt(Math.floor(Math.random() * Number.MAX_SAFE_INTEGER)) ** 2n) % BigInt(max);
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Handle form submission (to be implemented)
+    setIsLoading(true);
+
+    if (!primaryWallet) {
+      alert('Please connect your wallet.');
+      setIsLoading(false);
+      return;
+    }
+
+    try {
+      // Get provider and signer
+      const { provider, signer } = await getProviderAndSigner();
+      console.log(provider)
+      if (!provider || !signer) {
+        alert('Failed to get provider or signer.');
+        setIsLoading(false);
+        return;
+      }
+
+      // Switch to Laos Network if necessary
+      if (primaryWallet?.connector.supportsNetworkSwitching()) {
+        await primaryWallet.switchNetwork(62850);
+        console.log("Success! Network switched");
+      }
+
+    //   // EvolutionCollectionFactory contract instance
+    //   const factoryAddress = '0x0000000000000000000000000000000000000403';
+    //   const factoryContract = new ethers.Contract(factoryAddress, evolutionCollectionFactoryABI, signer);
+    //   console.log(factoryContract)
+
+      // Create collection if not already created
+      const currentCollectionAddress = "0xfffffffffffffffffffffffe00000000000000d1"; 
+
+      const collectionContract = new ethers.Contract(currentCollectionAddress, evolutionCollectionABI, signer);
+      console.log(collectionContract, "collection contract")
+
+    //   // Prepare tokenURI
+    //   let imageFile = null;
+
+    //   if (image) {
+    //     imageFile = image;
+    //   } else if (predefinedImage) {
+    //     const response = await fetch(predefinedImage);
+    //     const blob = await response.blob();
+    //     imageFile = new File([blob], 'predefinedImage.jpg', { type: blob.type });
+    //   } else {
+    //     alert('Please select or upload an image.');
+    //     setIsLoading(false);
+    //     return;
+    //   }
+
+      // using the already created tokenURI for testing purposes
+      const tokenURI = "ipfs://QmdBGXMC7YzqhBysdiB8m2JHrb4BKHSduFCHXbnekAkAoy" //await uploadMetadataToIPFS({ name, message, image: imageFile });
+      console.log(tokenURI)
+
+      // Mint the NFT
+      const _to = walletAddress;
+      const _slot = getRandomBigInt(2n ** 96n - 1n); 
+
+      const txMint = await collectionContract.mintWithExternalURI(_to, _slot, tokenURI);
+    console.log('Mint transaction:', txMint);
+
+    // Wait for the transaction to be mined
+    const receipt = await txMint.wait();
+    console.log('Transaction receipt:', receipt);
+
+    // Parse the logs to find the MintedWithExternalURI event
+    let tokenId;
+    for (const log of receipt.logs) {
+      try {
+        const parsedLog = collectionContract.interface.parseLog(log);
+        if (parsedLog.name === 'MintedWithExternalURI') {
+          tokenId = parsedLog.args._tokenId;
+          break;
+        }
+      } catch (e) {
+        // Ignore logs that are not from this contract
+      }
+    }
+    if (tokenId) {
+        console.log('Minted token ID:', tokenId.toString());
+        alert(`NFT minted successfully! Token ID: ${tokenId.toString()}`);
+      } else {
+        console.error('MintedWithExternalURI event not found in transaction logs.');
+        alert('NFT minted successfully, but token ID could not be retrieved.');
+      }
+    } catch (error: any) {
+      console.error('An error occurred during minting:', error);
+      alert(`An error occurred during minting: ${error.message || error}`);
+    }
+
+    setIsLoading(false);
   };
 
   return (
@@ -82,7 +191,7 @@ const Form: React.FC = () => {
           <div className="mb-2 text-center">Or Upload Your Own Image</div>
           <input
             type="file"
-            accept="image/png, image/jpeg image/jpg"
+            accept="image/png, image/jpeg, image/jpg"
             onChange={(e) => {
               if (e.target.files && e.target.files[0]) {
                 const file = e.target.files[0];
@@ -101,8 +210,9 @@ const Form: React.FC = () => {
         <button
           type="submit"
           className="w-full bg-blue-500 text-white p-2 rounded"
+          disabled={isLoading}
         >
-          Submit
+          {isLoading ? 'Minting...' : 'Submit'}
         </button>
       </form>
     </div>

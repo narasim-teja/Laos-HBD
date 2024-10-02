@@ -11,8 +11,12 @@
   },
   "dependencies": {
     "@dynamic-labs/ethereum": "^3.1.3",
+    "@dynamic-labs/ethers-v6": "^3.1.4",
     "@dynamic-labs/sdk-react-core": "^3.1.3",
+    "@pinata/sdk": "^2.1.0",
     "autoprefixer": "^10.4.20",
+    "ethers": "^6.13.2",
+    "nft.storage": "^7.2.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "viem": "^2.21.16"
