@@ -66,7 +66,7 @@ function getRandomBigInt(max) {
     //   console.log(factoryContract)
 
       // Create collection if not already created
-      const currentCollectionAddress = "0xfffffffffffffffffffffffe00000000000000d1"; 
+      const currentCollectionAddress = "0xfffffffffffffffffffffffe00000000000000d1"; //created the sibling collection
 
       const collectionContract = new ethers.Contract(currentCollectionAddress, evolutionCollectionABI, signer);
       console.log(collectionContract, "collection contract")
