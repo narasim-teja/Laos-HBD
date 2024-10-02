@@ -34,12 +34,15 @@ const Form: React.FC = () => {
   const {primaryWallet} = useDynamicContext();
 
   const getProviderAndSigner = async () => {
+    
     if (!primaryWallet) {
-      throw new Error('Wallet not connected');
+      throw new Error('Wallet not connected. Please connect your wallet first.');
     }
   
-    const provider = await getWeb3Provider(primaryWallet);
-    const signer = await getSigner(primaryWallet);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const provider = await getWeb3Provider(primaryWallet as any);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const signer = await getSigner(primaryWallet as any );
     return { provider, signer };
   };
 
