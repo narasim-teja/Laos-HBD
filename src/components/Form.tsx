@@ -5,7 +5,7 @@ import { ethers } from 'ethers';
 import { evolutionCollectionABI } from '../abi.ts';
 import { getWeb3Provider, getSigner } from '@dynamic-labs/ethers-v6';
 import { uploadMetadataToIPFS } from '../ipfs';
-import { CloudUploadIcon, ExternalLinkIcon } from '@heroicons/react/outline';
+import { CloudUploadIcon} from '@heroicons/react/outline';
 import { isHex } from '@dynamic-labs/utils';
 import Testnet from './Testnet.tsx';
 import Laos from './Laos.tsx';
@@ -34,12 +34,16 @@ const Form: React.FC = () => {
   const {primaryWallet} = useDynamicContext();
 
   const getProviderAndSigner = async () => {
+    if (!primaryWallet) {
+      throw new Error('Wallet not connected');
+    }
+  
     const provider = await getWeb3Provider(primaryWallet);
     const signer = await getSigner(primaryWallet);
     return { provider, signer };
   };
 
-  function getRandomBigInt(max) {
+  function getRandomBigInt(max: bigint) {
     return (BigInt(Math.floor(Math.random() * Number.MAX_SAFE_INTEGER)) ** 2n) % BigInt(max);
   }
 
@@ -123,20 +127,23 @@ const Form: React.FC = () => {
       for (const log of receipt.logs) {
         try {
           const parsedLog = collectionContract.interface.parseLog(log);
-          if (parsedLog.name === 'MintedWithExternalURI') {
+          if (parsedLog && parsedLog.name === 'MintedWithExternalURI') {
             tokenId = parsedLog.args._tokenId;
             break;
           }
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
         } catch (e) {
           // Ignore logs that are not from this contract
         }
       }
+      
 
       if (tokenId) {
         alert(`NFT minted successfully! Token ID: ${tokenId.toString()}`);
       } else {
         alert('NFT minted successfully, but token ID could not be retrieved.');
       }
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
       console.error('An error occurred during minting:', error);
       alert(`An error occurred during minting: ${error.message || error}`);
