@@ -1,3 +1,12 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+
+body {
+    font-family: 'Inter', sans-serif;
+    background-size: cover;
+    background-repeat: no-repeat;
+    background-position: center;
+  }
+  
