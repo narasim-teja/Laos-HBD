@@ -9,6 +9,7 @@ import { CloudUploadIcon, ExternalLinkIcon } from '@heroicons/react/outline';
 import { isHex } from '@dynamic-labs/utils';
 import Testnet from './Testnet.tsx';
 import Laos from './Laos.tsx';
+import CollectionLink from './CollectionLink.tsx';
 
 const isValidEVMAddress = (address: string): boolean => {
   return isHex(address) && address.length === 42 && address.startsWith('0x');
@@ -255,6 +256,7 @@ const Form: React.FC = () => {
           >
             {isLoading ? 'Minting...' : 'Submit'}
           </button>
+          <CollectionLink/>
           <Laos/>
         </form>
       </div>
