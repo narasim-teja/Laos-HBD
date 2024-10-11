@@ -1,15 +1,16 @@
 import React, { useState } from 'react';
 import WalletConnect from './WalletConnect';
 import { useDynamicContext } from '@dynamic-labs/sdk-react-core';
-import { ethers } from 'ethers';
-import { evolutionCollectionABI } from '../abi.ts';
-import { getWeb3Provider, getSigner } from '@dynamic-labs/ethers-v6';
-import { uploadMetadataToIPFS } from '../ipfs';
+// import { ethers } from 'ethers';
+// import { evolutionCollectionABI } from '../abi.ts';
+// import { getWeb3Provider, getSigner } from '@dynamic-labs/ethers-v6';
+// import { uploadMetadataToIPFS } from '../ipfs';
 import { CloudUploadIcon} from '@heroicons/react/outline';
 import { isHex } from '@dynamic-labs/utils';
 import Testnet from './Testnet.tsx';
 import Laos from './Laos.tsx';
 import CollectionLink from './CollectionLink.tsx';
+import { LaosCollection, PolygonCollection, LaosSigmaChainId, PolygonChainId } from '../constants';
 
 const isValidEVMAddress = (address: string): boolean => {
   return isHex(address) && address.length === 42 && address.startsWith('0x');
@@ -33,22 +34,22 @@ const Form: React.FC = () => {
 
   const {primaryWallet} = useDynamicContext();
 
-  const getProviderAndSigner = async () => {
+//   const getProviderAndSigner = async () => {
     
-    if (!primaryWallet) {
-      throw new Error('Wallet not connected. Please connect your wallet first.');
-    }
+//     if (!primaryWallet) {
+//       throw new Error('Wallet not connected. Please connect your wallet first.');
+//     }
   
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const provider = await getWeb3Provider(primaryWallet as any);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const signer = await getSigner(primaryWallet as any );
-    return { provider, signer };
-  };
+//     // eslint-disable-next-line @typescript-eslint/no-explicit-any
+//     const provider = await getWeb3Provider(primaryWallet as any);
+//     // eslint-disable-next-line @typescript-eslint/no-explicit-any
+//     const signer = await getSigner(primaryWallet as any );
+//     return { provider, signer };
+//   };
 
-  function getRandomBigInt(max: bigint) {
-    return (BigInt(Math.floor(Math.random() * Number.MAX_SAFE_INTEGER)) ** 2n) % BigInt(max);
-  }
+//   function getRandomBigInt(max: bigint) {
+//     return (BigInt(Math.floor(Math.random() * Number.MAX_SAFE_INTEGER)) ** 2n) % BigInt(max);
+//   }
 
   const validateWalletAddress = (address: string) => {
     const isValid = isValidEVMAddress(address);
@@ -92,20 +93,6 @@ const Form: React.FC = () => {
     }
 
     try {
-      const { provider, signer } = await getProviderAndSigner();
-      if (!provider || !signer) {
-        alert('Failed to get provider or signer.');
-        setIsLoading(false);
-        return;
-      }
-
-      if (primaryWallet?.connector.supportsNetworkSwitching()) {
-        await primaryWallet.switchNetwork(62850);
-      }
-
-      const currentCollectionAddress = "0xfffffffffffffffffffffffe00000000000000d1";
-      const collectionContract = new ethers.Contract(currentCollectionAddress, evolutionCollectionABI, signer);
-
       let imageFile = null;
       if (image) {
         imageFile = image;
@@ -119,40 +106,112 @@ const Form: React.FC = () => {
         return;
       }
 
-      const tokenURI = await uploadMetadataToIPFS({ name, message, image: imageFile });
-      const _to = walletAddress;
-      const _slot = getRandomBigInt(2n ** 96n - 1n);
+      // Upload image to IPFS and get the IPFS hash
+      const imageIpfsHash = await uploadImageToIPFS(imageFile);
+      console.log(imageIpfsHash)
 
-      const txMint = await collectionContract.mintWithExternalURI(_to, _slot, tokenURI);
-      const receipt = await txMint.wait();
+      // Mint NFT using the API
+      const mintResponse = await fetch('https://testnet.api.laosnetwork.io/graphql', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': '2303509b-3bfe-477f-8d4d-78c00488e127',
+        },
+        body: JSON.stringify({
+          query: `
+            mutation MintNFT {
+              mint(
+                input: {
+                  chainId: "${LaosSigmaChainId}"
+                  contractAddress: "${LaosCollection}"
+                  tokens: [
+                    {
+                      mintTo: ["${walletAddress}"]
+                      name: "${name}"
+                      description: "${message}"
+                      attributes: [{ trait_type: "Type", value: "Birthday NFT" }]
+                      image: "ipfs://${imageIpfsHash}"
+                    }
+                  ]
+                }
+              ) {
+                tokenIds
+                success
+              }
+            }
+          `,
+        }),
+      });
 
-      let tokenId;
-      for (const log of receipt.logs) {
-        try {
-          const parsedLog = collectionContract.interface.parseLog(log);
-          if (parsedLog && parsedLog.name === 'MintedWithExternalURI') {
-            tokenId = parsedLog.args._tokenId;
-            break;
-          }
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        } catch (e) {
-          // Ignore logs that are not from this contract
+      const mintResult = await mintResponse.json();
+      console.log('Mint API Response:', mintResult);
+
+      if (mintResult.data && mintResult.data.mint && mintResult.data.mint.success) {
+        const tokenId = mintResult.data.mint.tokenIds[0];
+        alert(`NFT minted successfully! Token ID: ${tokenId}`);
+
+        // Call the broadcast API
+        const broadcastResponse = await fetch('https://testnet.api.laosnetwork.io/graphql', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-api-key': '2303509b-3bfe-477f-8d4d-78c00488e127',
+          },
+          body: JSON.stringify({
+            query: `
+              mutation BroadCast {
+                broadcast(input: {
+                  tokenId: "${tokenId}",
+                  chainId: "${PolygonChainId}",
+                  ownershipContractAddress: "${PolygonCollection}"
+                }) {
+                  success
+                  tokenId
+                }
+              }
+            `,
+          }),
+        });
+
+        const broadcastResult = await broadcastResponse.json();
+        console.log('Broadcast API Response:', broadcastResult);
+
+        if (broadcastResult.data && broadcastResult.data.broadcast && broadcastResult.data.broadcast.success) {
+          alert(`Token broadcasted successfully! Token ID: ${broadcastResult.data.broadcast.tokenId}`);
+        } else {
+          alert('Failed to broadcast the token.');
         }
-      }
-      
-
-      if (tokenId) {
-        alert(`NFT minted successfully! Token ID: ${tokenId.toString()}`);
       } else {
-        alert('NFT minted successfully, but token ID could not be retrieved.');
+        alert('Failed to mint NFT.');
       }
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    } catch (error: any) {
+    } catch (error:any) {
       console.error('An error occurred during minting:', error);
       alert(`An error occurred during minting: ${error.message || error}`);
     }
 
     setIsLoading(false);
+  };
+
+  // Helper function to upload image to IPFS
+  const uploadImageToIPFS = async (imageFile: File): Promise<string> => {
+    const formData = new FormData();
+    formData.append('file', imageFile);
+
+    const response = await fetch('https://api.pinata.cloud/pinning/pinFileToIPFS', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${import.meta.env.VITE_PINATA_JWT}`,
+      },
+      body: formData,
+    });
+
+    const result = await response.json();
+    if (result.IpfsHash) {
+      return result.IpfsHash;
+    } else {
+      throw new Error('Failed to upload image to IPFS');
+    }
   };
 
   return (
