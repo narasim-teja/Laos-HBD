@@ -13,6 +13,7 @@
     "@dynamic-labs/ethereum": "^3.1.3",
     "@dynamic-labs/ethers-v6": "^3.1.4",
     "@dynamic-labs/sdk-react-core": "^3.1.3",
+    "@ensdomains/ensjs": "^4.0.1-alpha.0",
     "@fontsource/inter": "^5.1.0",
     "@heroicons/react": "^1.0.0",
     "@pinata/sdk": "^2.1.0",
@@ -21,6 +22,7 @@
     "nft.storage": "^7.2.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
+    "react-toastify": "^10.0.6",
     "viem": "^2.21.16"
   },
   "devDependencies": {

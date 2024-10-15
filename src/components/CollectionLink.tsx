@@ -1,11 +1,10 @@
 import { ExternalLinkIcon } from '@heroicons/react/outline';
-import { LaosCollection } from '../constants';
 
 const CollectionLink: React.FC = () => {
   return (
     <div className="mt-8 mb-4 text-center">
       <a
-        href={`https://sigma.explorer.laosnetwork.io/address/${LaosCollection}?tab=txs`}
+        href={`https://opensea.io/collection/hbd-collection-1`}
         target="_blank"
         rel="noopener noreferrer"
         className="text-blue-500 hover:text-blue-700 text-sm flex items-center justify-center"
