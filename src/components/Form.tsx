@@ -26,6 +26,7 @@ const Form: React.FC = () => {
   const [predefinedImage, setPredefinedImage] = useState<string>('');
   const [isLoading, setIsLoading] = useState(false);
   const [isValidWalletAddress, setIsValidWalletAddress] = useState(true);
+  const [isMinted, setIsMinted] = useState(false);
   const apiKey = import.meta.env.VITE_API_KEY;
   
 
@@ -77,6 +78,16 @@ const Form: React.FC = () => {
         alert('File size exceeds 5MB.');
       }
     }
+  };
+
+  const resetForm = () => {
+    setName('');
+    setMessage('');
+    setWalletAddress('');
+    setImage(null);
+    setImagePreview(null);
+    setPredefinedImage('');
+    setIsMinted(false);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -151,6 +162,7 @@ const Form: React.FC = () => {
       if (mintResult.data && mintResult.data.mint && mintResult.data.mint.success) {
         const tokenId = mintResult.data.mint.tokenIds[0];
         toast.success(`NFT minted successfully! Token ID: ${tokenId}`); // Use toast instead of alert
+        setIsMinted(true);
 
         // Call the broadcast API
         const broadcastResponse = await fetch('https://testnet.api.laosnetwork.io/graphql', {
@@ -323,11 +335,12 @@ const Form: React.FC = () => {
 
             {/* Submit Button */}
             <button
-              type="submit"
+              type={isMinted ? 'button' : 'submit'}
               className="w-full bg-blue-500 text-white p-3 rounded hover:bg-blue-600 transition-colors duration-300 font-semibold"
               disabled={isLoading}
+              onClick={isMinted ? resetForm : undefined}
             >
-              {isLoading ? 'Minting...' : 'Submit'}
+              {isLoading ? 'Minting...' : isMinted ? 'Start Again' : 'Submit'}
             </button>
             <CollectionLink/>
             <Laos/>
