@@ -16,7 +16,7 @@ A decentralized application (dApp) that allows users to create and mint personal
 
 1. **Clone the Repository**
    ```bash
-   git clone https://github.com/yourusername/laos-hbd.git
+   git clone https://github.com/narasim-teja/laos-hbd.git
    cd laos-hbd
    ```
 
