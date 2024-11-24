@@ -12,6 +12,14 @@ import CollectionLink from './CollectionLink.tsx';
 import { PolygonCollection, PolygonChainId } from '../constants';
 import { ToastContainer, toast } from 'react-toastify'; // Import ToastContainer and toast
 import 'react-toastify/dist/ReactToastify.css'; // Import CSS for the toast notifications
+import { createPublicClient, http } from 'viem';
+import { mainnet } from 'viem/chains';
+import { normalize } from 'viem/ens';
+
+const publicClient = createPublicClient({
+  chain: mainnet,
+  transport: http(`https://eth-mainnet.g.alchemy.com/v2/${import.meta.env.VITE_ALCHEMY_API_KEY}`)
+});
 
 const isValidEVMAddress = (address: string): boolean => {
   return isHex(address) && address.length === 42 && address.startsWith('0x');
@@ -28,6 +36,7 @@ const Form: React.FC = () => {
   const [isValidWalletAddress, setIsValidWalletAddress] = useState(true);
   const [isMinted, setIsMinted] = useState(false);
   const apiKey = import.meta.env.VITE_API_KEY;
+  const [isResolvingENS, setIsResolvingENS] = useState(false);
   
 
   const predefinedImages = [
@@ -55,16 +64,54 @@ const Form: React.FC = () => {
 //     return (BigInt(Math.floor(Math.random() * Number.MAX_SAFE_INTEGER)) ** 2n) % BigInt(max);
 //   }
 
-  const validateWalletAddress = (address: string) => {
-    const isValid = isValidEVMAddress(address);
-    setIsValidWalletAddress(isValid);
-    return isValid;
+  const validateWalletAddress = async (input: string) => {
+    // Reset validation state
+    setIsValidWalletAddress(true);
+    
+    try {
+      // Check if it's an ENS name
+      if (input.toLowerCase().endsWith('.eth')) {
+        setIsResolvingENS(true);
+        try {
+          // Normalize the ENS name
+          const normalized = normalize(input);
+          // Resolve the ENS name to an address
+          const resolvedAddress = await publicClient.getEnsAddress({
+            name: normalized,
+          });
+
+          if (resolvedAddress) {
+            setWalletAddress(resolvedAddress);
+            setIsValidWalletAddress(true);
+            return true;
+          } else {
+            setIsValidWalletAddress(false);
+            return false;
+          }
+        } catch (error) {
+          console.error('ENS resolution error:', error);
+          setIsValidWalletAddress(false);
+          return false;
+        } finally {
+          setIsResolvingENS(false);
+        }
+      } else {
+        // If not ENS, validate as regular EVM address
+        const isValid = isValidEVMAddress(input);
+        setIsValidWalletAddress(isValid);
+        return isValid;
+      }
+    } catch (error) {
+      console.error('Validation error:', error);
+      setIsValidWalletAddress(false);
+      return false;
+    }
   };
 
-  const handleWalletAddressChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const address = e.target.value;
-    setWalletAddress(address);
-    validateWalletAddress(address);
+  const handleWalletAddressChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const input = e.target.value;
+    setWalletAddress(input);
+    await validateWalletAddress(input);
   };
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -264,7 +311,7 @@ const Form: React.FC = () => {
 
             {/* Wallet Address Field */}
             <div className="mb-6">
-              <label className="block text-gray-700 font-medium">Wallet Address</label>
+              <label className="block text-gray-700 font-medium">Wallet Address or ENS Name</label>
               <input
                 type="text"
                 className={`mt-1 p-3 w-full border rounded focus:outline-none focus:ring-2 ${
@@ -272,10 +319,16 @@ const Form: React.FC = () => {
                 }`}
                 value={walletAddress}
                 onChange={handleWalletAddressChange}
+                placeholder="0x... or name.eth"
                 required
               />
-              {!isValidWalletAddress && (
-                <p className="mt-1 text-red-500 text-sm">Please enter a valid EVM wallet address.</p>
+              {isResolvingENS && (
+                <p className="mt-1 text-blue-500 text-sm">Resolving ENS name...</p>
+              )}
+              {!isValidWalletAddress && !isResolvingENS && (
+                <p className="mt-1 text-red-500 text-sm">
+                  Please enter a valid EVM address or ENS name
+                </p>
               )}
             </div>
 
