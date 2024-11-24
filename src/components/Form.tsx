@@ -10,8 +10,8 @@ import { isHex } from '@dynamic-labs/utils';
 import Laos from './Laos.tsx';
 import CollectionLink from './CollectionLink.tsx';
 import { PolygonCollection, PolygonChainId } from '../constants';
-import { ToastContainer, toast } from 'react-toastify'; // Import ToastContainer and toast
-import 'react-toastify/dist/ReactToastify.css'; // Import CSS for the toast notifications
+import { ToastContainer, toast } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 import { createPublicClient, http } from 'viem';
 import { mainnet } from 'viem/chains';
 import { normalize } from 'viem/ens';
